@@ -102,3 +102,12 @@ See `requirements.txt`. Core dependencies:
 - `streamlit`
 - `spacy`
 - `PyPDF2`
+
+  ## Group Members:
+  1. Hamza Abdul Karim (F23607046)
+  2. Ahad Imran (F23607034)
+  3. Syed Zain Ul Abidin (F23607031)
+  4. Muhammad Abdul Ghani (F23607005)
+  5. Muhammad Usman Nasir (F23607004)
+
+ _______________________________________________________________________________________________________________________
