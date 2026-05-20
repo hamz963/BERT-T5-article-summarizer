@@ -1,4 +1,5 @@
 # Smart Summarizer (BERT + T5)
+<img width="917" height="467" alt="image" src="https://github.com/user-attachments/assets/92004ce9-128c-4e59-b177-542a2ec2c93b" />
 
 An end-to-end article summarization web application that combines:
 - **BERT** for extractive sentence selection
