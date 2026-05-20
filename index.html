@@ -1,0 +1,394 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Smart Summarizer (BERT + T5)</title>
+  <style>
+    :root {
+      --bg1: #0b1220;
+      --bg2: #0f1b33;
+      --card: rgba(255,255,255,0.06);
+      --card2: rgba(255,255,255,0.08);
+      --stroke: rgba(255,255,255,0.12);
+      --text: rgba(255,255,255,0.92);
+      --muted: rgba(255,255,255,0.70);
+      --brand: #7c3aed;
+      --brand2: #22c55e;
+      --warn: #f59e0b;
+      --danger: #ef4444;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji",
+        "Segoe UI Emoji";
+      color: var(--text);
+      background: radial-gradient(1200px 700px at 10% 0%, rgba(124, 58, 237, 0.35), transparent 60%),
+                  radial-gradient(900px 600px at 100% 10%, rgba(34, 197, 94, 0.25), transparent 55%),
+                  linear-gradient(180deg, var(--bg1), var(--bg2));
+      min-height: 100vh;
+    }
+
+    header {
+      padding: 40px 18px 10px;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .title-row { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+    .logo {
+      width: 44px;
+      height: 44px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, rgba(124,58,237,1), rgba(34,197,94,0.9));
+      box-shadow: 0 20px 50px rgba(124,58,237,0.25);
+      border: 1px solid rgba(255,255,255,0.16);
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    h1 { margin: 0; font-size: 30px; letter-spacing: -0.03em; }
+    p.subtitle { margin: 6px 0 0; color: var(--muted); max-width: 70ch; }
+
+    main {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 18px;
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 16px;
+    }
+
+    @media (max-width: 980px) {
+      main { grid-template-columns: 1fr; }
+    }
+
+    .card {
+      background: linear-gradient(180deg, var(--card), rgba(255,255,255,0.04));
+      border: 1px solid var(--stroke);
+      border-radius: 18px;
+      box-shadow: 0 20px 70px rgba(0,0,0,0.25);
+      overflow: hidden;
+    }
+
+    .card-header {
+      padding: 14px 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.10);
+      background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .card-header h2 {
+      margin: 0;
+      font-size: 14px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.78);
+    }
+
+    .pill {
+      font-size: 12px;
+      padding: 7px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.14);
+      color: rgba(255,255,255,0.78);
+      background: rgba(255,255,255,0.04);
+      white-space: nowrap;
+    }
+
+    .content { padding: 16px; }
+
+    label {
+      display: block;
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 170px;
+      resize: vertical;
+      padding: 12px 12px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,0.16);
+      background: rgba(0,0,0,0.20);
+      color: var(--text);
+      outline: none;
+      line-height: 1.45;
+      font-size: 14px;
+    }
+
+    textarea:focus {
+      border-color: rgba(124,58,237,0.55);
+      box-shadow: 0 0 0 4px rgba(124,58,237,0.20);
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 200px;
+      gap: 12px;
+      align-items: end;
+    }
+
+    @media (max-width: 640px) {
+      .row { grid-template-columns: 1fr; }
+    }
+
+    .field { margin-bottom: 14px; }
+
+    .btn {
+      cursor: pointer;
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,0.14);
+      background: linear-gradient(135deg, rgba(124,58,237,0.95), rgba(34,197,94,0.70));
+      color: white;
+      font-weight: 700;
+      font-size: 14px;
+      letter-spacing: -0.01em;
+      transition: transform 0.08s ease, filter 0.15s ease;
+    }
+
+    .btn:hover { filter: brightness(1.04); }
+    .btn:active { transform: translateY(1px); }
+
+    .btn.secondary {
+      background: rgba(255,255,255,0.06);
+      font-weight: 650;
+    }
+
+    .btn[disabled] {
+      cursor: not-allowed;
+      opacity: 0.65;
+      filter: grayscale(20%);
+    }
+
+    .small {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 10px;
+      line-height: 1.45;
+    }
+
+    .divider { height: 1px; background: rgba(255,255,255,0.10); margin: 14px 0; }
+
+    .output {
+      display: grid;
+      gap: 12px;
+    }
+
+    .box {
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.04);
+      padding: 12px;
+    }
+
+    .box h3 {
+      margin: 0 0 8px;
+      font-size: 13px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.78);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .tag {
+      font-size: 11px;
+      padding: 6px 9px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.14);
+      color: rgba(255,255,255,0.70);
+      background: rgba(255,255,255,0.04);
+      white-space: nowrap;
+    }
+
+    pre {
+      margin: 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      line-height: 1.45;
+      color: rgba(255,255,255,0.90);
+      font-size: 14px;
+    }
+
+    .notice {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      padding: 12px;
+      border-radius: 16px;
+      border: 1px solid rgba(245,158,11,0.35);
+      background: rgba(245,158,11,0.10);
+      color: rgba(255,255,255,0.88);
+      margin-bottom: 12px;
+    }
+    .notice .icon { width: 24px; height: 24px; border-radius: 8px; background: rgba(245,158,11,0.25); display:grid; place-items:center; font-weight:800; }
+
+    .footer {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 8px 18px 40px;
+      color: rgba(255,255,255,0.60);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    a { color: rgba(167, 139, 250, 0.95); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="title-row">
+      <div class="logo">Σ</div>
+      <div>
+        <h1>Smart Summarizer</h1>
+        <p class="subtitle">A clean HTML frontend for the existing BERT + T5 summarization pipeline in <code>summarize.ipynb</code>.</p>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="card">
+      <div class="card-header">
+        <h2>Input</h2>
+        <div class="pill">BERT + T5 • Extractive + Abstractive • ROUGE</div>
+      </div>
+      <div class="content">
+
+        <div class="notice">
+          <div class="icon">!</div>
+          <div>
+            <div style="font-weight:800; margin-bottom:4px;">Backend required</div>
+            <div style="color: rgba(255,255,255,0.80);">
+              This static page can’t execute Python/transformers by itself in your browser.
+              Use it to prepare text and then run the notebook to generate results in <code>output/</code>.
+            </div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="text">Paste article text</label>
+          <textarea id="text" placeholder="Paste your article text here..."></textarea>
+          <div class="small">Tip: summaries work best with longer, well-formed paragraphs.</div>
+        </div>
+
+        <div class="row">
+          <div class="field">
+            <label for="maxLen">Max summary length (for notebook)</label>
+            <input id="maxLen" type="number" min="50" max="300" value="130" style="width:100%; padding:12px 12px; border-radius:14px; border:1px solid rgba(255,255,255,0.16); background: rgba(0,0,0,0.20); color: var(--text); outline:none;" />
+            <div class="small">The notebook uses this as <code>max_length</code>.</div>
+          </div>
+          <div style="display:grid; gap:12px;">
+            <button class="btn" id="copyBtn" type="button">Copy for Notebook</button>
+            <button class="btn secondary" id="openOutputBtn" type="button">Open Output Folder</button>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="small">
+          How to use:
+          <ol style="margin: 8px 0 0 18px; padding: 0;">
+            <li>Paste text on the left.</li>
+            <li>Click <b>Copy for Notebook</b> (copies text + parameters).</li>
+            <li>Run <b>summarize.ipynb</b> to generate summaries and outputs.</li>
+            <li>View files under <code>output/</code>.</li>
+          </ol>
+        </div>
+      </div>
+    </section>
+
+    <aside class="card">
+      <div class="card-header">
+        <h2>Quick Preview</h2>
+        <div class="pill" id="statusPill">Ready</div>
+      </div>
+      <div class="content">
+        <div class="output">
+          <div class="box">
+            <h3>
+              Ensemble summary
+              <span class="tag">(run notebook)</span>
+            </h3>
+            <pre id="ensembleOut">—</pre>
+          </div>
+          <div class="box">
+            <h3>
+              ROUGE scores
+              <span class="tag">(batch in notebook)</span>
+            </h3>
+            <pre id="rougeOut">—</pre>
+          </div>
+        </div>
+
+        <div class="small" style="margin-top: 12px;">
+          This HTML page doesn’t compute summaries. After you run the notebook, you can update these fields manually or replace this section
+          with a real backend (Flask/FastAPI) that calls the same Python functions.
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <div class="footer">
+    Frontend: static HTML only. Summarization happens in <code>summarize.ipynb</code> (Python) and writes results into <code>output/</code>.
+  </div>
+
+  <script>
+    const textEl = document.getElementById('text');
+    const maxLenEl = document.getElementById('maxLen');
+    const ensembleOut = document.getElementById('ensembleOut');
+    const rougeOut = document.getElementById('rougeOut');
+    const statusPill = document.getElementById('statusPill');
+
+    function setStatus(msg) {
+      statusPill.textContent = msg;
+    }
+
+    document.getElementById('copyBtn').addEventListener('click', async () => {
+      const txt = (textEl.value || '').trim();
+      const maxLen = Number(maxLenEl.value);
+
+      if (!txt) {
+        alert('Paste some article text first.');
+        return;
+      }
+
+      const payload = [
+        '--- Notebook input ---',
+        'max_length = ' + (Number.isFinite(maxLen) ? maxLen : 130),
+        '',
+        txt
+      ].join('\n');
+
+      try {
+        await navigator.clipboard.writeText(payload);
+        setStatus('Copied ✓');
+        setTimeout(() => setStatus('Ready'), 1500);
+      } catch (e) {
+        alert('Clipboard copy failed. Copy manually from the text box.');
+      }
+    });
+
+    document.getElementById('openOutputBtn').addEventListener('click', () => {
+      // Static HTML: can’t open local folders reliably across browsers.
+      // Provide guidance instead.
+      alert('Open the project folder and check: output/summarization_results.csv (and .xlsx if available).');
+    });
+  </script>
+</body>
+</html>
+
